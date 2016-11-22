@@ -19,13 +19,18 @@ namespace BankBot
         /// </summary>
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity) {
             if (activity.Type == ActivityTypes.Message) {
-                ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
-                // calculate something for us to return
-                int length = (activity.Text ?? string.Empty).Length;
+                /*    ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+                    // calculate something for us to return
+                    int length = (activity.Text ?? string.Empty).Length;
 
-                // return our reply to the user
-                Activity reply = activity.CreateReply($"You sent {activity.Text} which was {length} characters. Oh and you suck!");
+                    // return our reply to the user
+                    Activity reply = activity.CreateReply($"You sent {activity.Text} which was {length} characters. Oh and you suck!");
+                    await connector.Conversations.ReplyToActivityAsync(reply);  */
+
+                ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+                Activity reply = activity.CreateReply($"This is still under maintenance");
                 await connector.Conversations.ReplyToActivityAsync(reply);
+
             }
             else {
                 HandleSystemMessage(activity);
