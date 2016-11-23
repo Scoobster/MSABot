@@ -28,6 +28,9 @@ namespace BankBot
                     await connector.Conversations.ReplyToActivityAsync(reply);  */
 
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+
+
+
                 Activity reply = activity.CreateReply($"This is still under maintenance");
                 await connector.Conversations.ReplyToActivityAsync(reply);
 
