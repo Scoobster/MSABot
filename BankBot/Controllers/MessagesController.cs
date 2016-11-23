@@ -7,6 +7,7 @@ using System.Web.Http;
 using System.Web.Http.Description;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
+using BankBot.Models;
 
 namespace BankBot
 {
@@ -29,9 +30,13 @@ namespace BankBot
 
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
 
+                LUISObject.RootObject luisObj;
 
+                HttpClient client = new HttpClient();
+                string x = await client.GetStringAsync(new Uri("https://api.projectoxford.ai/luis/v2.0/apps/a4ab66bf-68bb-4e95-8951-8b179e6f3c21?subscription-key=14b2e4303e5948578989704f3ef1fd87&q=" + activity.Text + "&verbose=true"));
+                luisObj = JsonConvert.DeserializeObject<LUISObject.RootObject>(x);
 
-                Activity reply = activity.CreateReply($"This is still under maintenance");
+                Activity reply = activity.CreateReply($"" + luisObj.topScoringIntent.intent);
                 await connector.Conversations.ReplyToActivityAsync(reply);
 
             }
