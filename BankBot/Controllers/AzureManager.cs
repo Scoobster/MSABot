@@ -34,7 +34,7 @@ namespace BankBot.Controllers
             }
         }
 
-        public async Task<List<BankAccount>> getAccounts() {
+        private async Task<List<BankAccount>> getAccounts() {
             return await this.accountsTable.ToListAsync();
         }
 
@@ -46,15 +46,11 @@ namespace BankBot.Controllers
             await this.accountsTable.UpdateAsync(bankAcc);
         }
 
-        public async Task DeleteAccount(BankAccount bankAcc) {
-            await this.accountsTable.DeleteAsync(bankAcc);
-        }
-
         public async Task<BankAccount> getAccount(string name) {
             BankAccount account = null;
             List<BankAccount> table = await getAccounts();
             foreach(BankAccount ba in table) {
-                if (ba.Name.ToLower() == name.ToLower()) {
+                if (ba.Name.ToLower() == name.ToLower().Trim()) {
                     account = ba;
                 }
             }

@@ -18,17 +18,11 @@ namespace BankBot.DataModels
         [JsonProperty(PropertyName = "createdAt")]
         public DateTime Date { get; set; }
 
-        [JsonProperty(PropertyName = "accountTypes")]
-        public List<string> Types { get; set; }
-
-        [JsonProperty(PropertyName = "accountAmount")]
-        public Dictionary<string, double> Amounts { get; set; }
+        [JsonProperty(PropertyName = "Amount")]
+        public double Amount { get; set; }
 
         [JsonProperty(PropertyName = "accountNumbers")]
-        public Dictionary<string, string> AccountNumbers { get; set; }
-
-        [JsonProperty(PropertyName = "payeeAccounts")]
-        public List<string> Payees { get; set; }
+        public string AccountNumber { get; set; }
 
     }
 }

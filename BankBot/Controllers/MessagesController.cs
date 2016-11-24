@@ -36,39 +36,18 @@ namespace BankBot
 
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity) {
             if (activity.Type == ActivityTypes.Message) {
-                if (activity.Text == "test") {
-                    List<string> types = new List<string>();
-                    types.Add("spending");
-                    types.Add("savings");
-                    types.Add("credit card");
-
-                    Dictionary<string, double> amounts = new Dictionary<string, double>();
-                    amounts.Add("spending", 256);
-                    amounts.Add("savings", 5000.26);
-                    amounts.Add("credit card", 500);
-
-                    Dictionary<string, string> numbers = new Dictionary<string, string>();
-                    numbers.Add("spending", "55-5555-5555555-25");
-                    numbers.Add("savings", "22-0000-5555555-25");
-                    numbers.Add("credit card", "33-6666-7777777-56");
-
-                    List<string> payees = new List<string>();
-                    payees.Add("Bob");
-                    payees.Add("Allan");
-                    payees.Add("Max");
+               /* if (activity.Text == "test") {
 
                     BankAccount newAccount = new BankAccount() {
-                        Name = "Andrew",
+                        Name = "Sahil",
                         Date = DateTime.Now,
-                        Types = types,
-                        Amounts = amounts,
-                        AccountNumbers = numbers,
-                        Payees = payees
+                        Amount = 500,
+                        AccountNumber = "00-3333-888888888-11",
                     };
 
                     await AzureManager.AzureManagerInstance.AddAccount(newAccount);
                 }
-
+                */
 
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
 
@@ -136,7 +115,34 @@ namespace BankBot
 
                         return Request.CreateResponse(HttpStatusCode.OK);
 
+                    } else if (activity.Text == "CancelPayment") {
+
+                        await connector.Conversations.SendToConversationAsync(activity.CreateReply($"This payment has been cancelled!"));
+                        return Request.CreateResponse(HttpStatusCode.OK);
+
+                    } else if (activity.Text.Substring(0,14) == "ConfirmPayment") {
+
+                        string[] stringParts = activity.Text.Split(' ');
+                        double amount = Convert.ToDouble(stringParts[1]);
+
+                        ACCOUNT = await AzureManager.AzureManagerInstance.getAccount(userData.GetProperty<string>("Name"));
+
+                        if (ACCOUNT.Amount >= amount) {
+
+                            ACCOUNT.Amount = ACCOUNT.Amount - amount;
+                            await AzureManager.AzureManagerInstance.UpdateAccount(ACCOUNT);
+                            await connector.Conversations.SendToConversationAsync(activity.CreateReply($"Payment to " + stringParts[2] + " of " + stringParts[1] + " has been made."));
+                            return Request.CreateResponse(HttpStatusCode.OK);
+
+                        } else {
+
+                            await connector.Conversations.SendToConversationAsync(activity.CreateReply($"Payment could not be made due to insufficient funds!"));
+                            return Request.CreateResponse(HttpStatusCode.NotAcceptable);
+
+                        }
+
                     }
+
                 }
 
                 if (!userData.GetProperty<bool>("LoggedIn") && intent == "Greeting") {
@@ -156,8 +162,8 @@ namespace BankBot
 
                     userData.SetProperty<string>("Name", " " + newName.Substring(0, 1).ToUpper() + newName.Substring(1));
                     userData.SetProperty<bool>("LoggedIn", true);
-                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                     await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"Hello" + userData.GetProperty<string>("Name") + "!"));
+                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                     return Request.CreateResponse(HttpStatusCode.OK);
 
                 } else if (intent == "ClearData") {
@@ -169,10 +175,12 @@ namespace BankBot
 
                 }
 
-                if (!userData.GetProperty<bool>("LoggedIn") || ACCOUNT == null) {
+                if (!userData.GetProperty<bool>("LoggedIn")) {
                     await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"Please login!"));
                     return Request.CreateResponse(HttpStatusCode.Unauthorized);
                 }
+
+                ACCOUNT = await AzureManager.AzureManagerInstance.getAccount(userData.GetProperty<string>("Name"));
 
                 if (!userData.GetProperty<bool>("SendGreeting")) {
 
@@ -207,19 +215,13 @@ namespace BankBot
 
                 } else if (intent == "CheckBalance") {
 
-                    string account = "spending";
-                    if (luisObj.topScoringIntent.actions[0].parameters[0].value != null) {
-                        account = luisObj.topScoringIntent.actions[0].parameters[0].value[0].entity;
-                    }
-
-                    double amount = 0; //Look in database
-
-                    output = "You have " + amount + " in your " + account + " account";
+                    output = "You have $" + ACCOUNT.Amount + " in your account " + ACCOUNT.AccountNumber;
 
                 } else if (intent == "MakePayment") {
 
-                    string amount = luisObj.topScoringIntent.actions[0].parameters[3].value[0].entity;
-                    string account = luisObj.topScoringIntent.actions[0].parameters[0].value[0].entity;
+                    string z = luisObj.topScoringIntent.actions[0].parameters[3].value[0].entity;
+                    decimal amount = Convert.ToDecimal(z.Substring(1));
+
                     string payee = "undefined";
                     if (luisObj.topScoringIntent.actions[0].parameters[1].value[0] != null) {
                         payee = luisObj.topScoringIntent.actions[0].parameters[1].value[0].entity;
@@ -228,7 +230,7 @@ namespace BankBot
                         payee = luisObj.topScoringIntent.actions[0].parameters[2].value[0].entity;
                     }
 
-                    Activity replyWeb = activity.CreateReply($"You wish to make a payment of " + amount + " from your " + account + " account to " + payee);
+                    Activity replyWeb = activity.CreateReply($"You wish to make a payment of " + amount + " to " + payee + " from " + ACCOUNT.AccountNumber);
                     replyWeb.Recipient = activity.From;
                     replyWeb.Type = "message";
                     replyWeb.Attachments = new List<Attachment>();
@@ -239,14 +241,14 @@ namespace BankBot
                     // ADD LOGIC TO BUTTONS
                     List<CardAction> cardAct = new List<CardAction>();
                     cardAct.Add(new CardAction() {
-                        Value = "http://msa.ms",
-                        Type = "openUrl",
+                        Value = "ConfirmPayment " + amount + " " + payee,
+                        Type = "postBack",
                         Title = "Confirm",
                         Image = TICK_IMAGE
                     });
                     cardAct.Add(new CardAction() {
-                        Value = "http://msa.ms",
-                        Type = "openUrl",
+                        Value = "CancelPayment",
+                        Type = "postBack",
                         Title = "Cancel",
                         Image = CROSS_IMAGE
                     });
