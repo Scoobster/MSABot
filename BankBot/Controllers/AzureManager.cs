@@ -57,5 +57,15 @@ namespace BankBot.Controllers
             return account;
         }
 
+        public async Task<bool> DoesExist(string name) {
+            List<BankAccount> table = await getAccounts();
+            foreach (BankAccount ba in table) {
+                if (ba.Name.ToLower() == name.ToLower().Trim()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
     }
 }

@@ -75,7 +75,7 @@ namespace BankBot
 
                 string intent = luisObj.topScoringIntent.intent;
 
-                if (activity.Text.Length > 9) {
+                if (activity.Text.Length > 8) {
                     if (activity.Text.Substring(0, 8).ToLower() == "location") {
 
                         string location = activity.Text.Substring(9);
@@ -120,25 +120,42 @@ namespace BankBot
                         await connector.Conversations.SendToConversationAsync(activity.CreateReply($"This payment has been cancelled!"));
                         return Request.CreateResponse(HttpStatusCode.OK);
 
-                    } else if (activity.Text.Substring(0,14) == "ConfirmPayment") {
+                    } else {
 
-                        string[] stringParts = activity.Text.Split(' ');
-                        double amount = Convert.ToDouble(stringParts[1]);
+                        if (activity.Text.Length >= 14) {
+                            if (activity.Text.Substring(0, 14) == "ConfirmPayment") {
 
-                        ACCOUNT = await AzureManager.AzureManagerInstance.getAccount(userData.GetProperty<string>("Name"));
+                                string[] stringParts = activity.Text.Split(' ');
+                                double amount = Convert.ToDouble(stringParts[1]);
+                                string payee = stringParts[2];
 
-                        if (ACCOUNT.Amount >= amount) {
+                                ACCOUNT = await AzureManager.AzureManagerInstance.getAccount(userData.GetProperty<string>("Name"));
 
-                            ACCOUNT.Amount = ACCOUNT.Amount - amount;
-                            await AzureManager.AzureManagerInstance.UpdateAccount(ACCOUNT);
-                            await connector.Conversations.SendToConversationAsync(activity.CreateReply($"Payment to " + stringParts[2] + " of " + stringParts[1] + " has been made."));
-                            return Request.CreateResponse(HttpStatusCode.OK);
+                                if (ACCOUNT.Amount >= amount && await AzureManager.AzureManagerInstance.DoesExist(payee)) {
 
-                        } else {
+                                    ACCOUNT.Amount = ACCOUNT.Amount - amount;
+                                    await AzureManager.AzureManagerInstance.UpdateAccount(ACCOUNT);
 
-                            await connector.Conversations.SendToConversationAsync(activity.CreateReply($"Payment could not be made due to insufficient funds!"));
-                            return Request.CreateResponse(HttpStatusCode.NotAcceptable);
+                                    BankAccount other = await AzureManager.AzureManagerInstance.getAccount(payee);
+                                    other.Amount = other.Amount + amount;
+                                    await AzureManager.AzureManagerInstance.UpdateAccount(other);
 
+                                    await connector.Conversations.SendToConversationAsync(activity.CreateReply($"Payment to " + payee + " of $" + amount + " has been made."));
+                                    return Request.CreateResponse(HttpStatusCode.OK);
+
+                                }
+                                else if (!(await AzureManager.AzureManagerInstance.DoesExist(payee))) {
+
+                                    await connector.Conversations.SendToConversationAsync(activity.CreateReply($"Payee could not be found!"));
+                                    return Request.CreateResponse(HttpStatusCode.NotFound);
+
+                                }
+                                else {
+
+                                    await connector.Conversations.SendToConversationAsync(activity.CreateReply($"Payment could not be made due to insufficient funds!"));
+                                    return Request.CreateResponse(HttpStatusCode.NotAcceptable);
+                                }
+                            }
                         }
 
                     }
@@ -223,10 +240,10 @@ namespace BankBot
                     decimal amount = Convert.ToDecimal(z.Substring(1));
 
                     string payee = "undefined";
-                    if (luisObj.topScoringIntent.actions[0].parameters[1].value[0] != null) {
+                    if (luisObj.topScoringIntent.actions[0].parameters[1].value != null) {
                         payee = luisObj.topScoringIntent.actions[0].parameters[1].value[0].entity;
                     }
-                    else if (luisObj.topScoringIntent.actions[0].parameters[2].value[0] != null) {
+                    else if (luisObj.topScoringIntent.actions[0].parameters[2].value != null) {
                         payee = luisObj.topScoringIntent.actions[0].parameters[2].value[0].entity;
                     }
 
