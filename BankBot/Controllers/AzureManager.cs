@@ -38,10 +38,6 @@ namespace BankBot.Controllers
             return await this.accountsTable.ToListAsync();
         }
 
-        public async Task AddAccount(BankAccount bankAcc) {
-            await this.accountsTable.InsertAsync(bankAcc);
-        }
-
         public async Task UpdateAccount(BankAccount bankAcc) {
             await this.accountsTable.UpdateAsync(bankAcc);
         }

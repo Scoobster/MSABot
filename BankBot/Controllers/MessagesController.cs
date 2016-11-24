@@ -36,18 +36,6 @@ namespace BankBot
 
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity) {
             if (activity.Type == ActivityTypes.Message) {
-               /* if (activity.Text == "test") {
-
-                    BankAccount newAccount = new BankAccount() {
-                        Name = "Sahil",
-                        Date = DateTime.Now,
-                        Amount = 500,
-                        AccountNumber = "00-3333-888888888-11",
-                    };
-
-                    await AzureManager.AzureManagerInstance.AddAccount(newAccount);
-                }
-                */
 
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
 
