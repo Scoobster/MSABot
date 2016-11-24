@@ -11,6 +11,9 @@ using BankBot.Models;
 using System.Collections.Generic;
 using Microsoft.ProjectOxford.Vision;
 using Microsoft.ProjectOxford.Vision.Contract;
+using Microsoft.WindowsAzure.MobileServices;
+using BankBot.Controllers;
+using BankBot.DataModels;
 
 namespace BankBot
 {
@@ -29,8 +32,43 @@ namespace BankBot
         private readonly string CROSS_IMAGE = "https://s18.postimg.org/baqrd9j55/Cross.png";
         private readonly string TICK_IMAGE = "https://s14.postimg.org/v2q7rcstd/Tick.png";
 
+        private BankAccount ACCOUNT = null;
+
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity) {
             if (activity.Type == ActivityTypes.Message) {
+
+                List<string> types = new List<string>();
+                types.Add("spending");
+                types.Add("savings");
+                types.Add("credit card");
+
+                Dictionary<string, double> amounts = new Dictionary<string, double>();
+                amounts.Add("spending", 256);
+                amounts.Add("savings", 5000.26);
+                amounts.Add("credit card", 500);
+
+                Dictionary<string, string> numbers = new Dictionary<string, string>();
+                numbers.Add("spending", "55-5555-5555555-25");
+                numbers.Add("savings", "22-0000-5555555-25");
+                numbers.Add("credit card", "33-6666-7777777-56");
+
+                List<string> payees = new List<string>();
+                payees.Add("Bob");
+                payees.Add("Allan");
+                payees.Add("Max");
+
+                BankAccount newAccount = new BankAccount() {
+                    Name = "Andrew",
+                    Date = DateTime.Now,
+                    Types = types,
+                    Amounts = amounts,
+                    AccountNumbers = numbers,
+                    Payees = payees
+                };
+
+                await AzureManager.AzureManagerInstance.AddAccount(newAccount);
+
+
                 /*    ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
                     // calculate something for us to return
                     int length = (activity.Text ?? string.Empty).Length;
@@ -40,6 +78,9 @@ namespace BankBot
                     await connector.Conversations.ReplyToActivityAsync(reply);  */
 
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+
+                MobileServiceClient azureClient = AzureManager.AzureManagerInstance.AzureClient;
+
 
                 StateClient stateClient = activity.GetStateClient();
                 BotData userData = await stateClient.BotState.GetUserDataAsync(activity.ChannelId, activity.From.Id);
@@ -52,7 +93,7 @@ namespace BankBot
                     VisionServiceClient VisionServiceClient = new VisionServiceClient("fff4c0ce2c8946a1a4a6bd8b951d13c6");
                     AnalysisResult analysisResult = await VisionServiceClient.DescribeAsync(activity.Attachments[0].ContentUrl, 3);
                     activity.Text = analysisResult.Description.Captions[0].Text;
-                    await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"The photo you sent us is of: " + activity.Text));
+                    await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"The photo you sent us is of " + activity.Text));
                 
                 }
 
@@ -105,10 +146,23 @@ namespace BankBot
                     }
                 }
 
+                if (!userData.GetProperty<bool>("LoggedIn") && intent == "Greeting") {
+                    await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"Hello! Please login to continue..."));
+                    return Request.CreateResponse(HttpStatusCode.OK);
+                }
+
                 if (intent == "SetName") {
 
                     string newName = luisObj.topScoringIntent.actions[0].parameters[0].value[0].entity;
-                    userData.SetProperty<string>("Name", " " + newName.Substring(0,1).ToUpper() + newName.Substring(1));
+
+                    ACCOUNT = await AzureManager.AzureManagerInstance.getAccount(newName);
+                    if (ACCOUNT == null) {
+                        await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"Account Not Found"));
+                        return Request.CreateResponse(HttpStatusCode.NotFound);
+                    }
+
+                    userData.SetProperty<string>("Name", " " + newName.Substring(0, 1).ToUpper() + newName.Substring(1));
+                    userData.SetProperty<bool>("LoggedIn", true);
                     await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                     await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"Hello" + userData.GetProperty<string>("Name") + "!"));
                     return Request.CreateResponse(HttpStatusCode.OK);
@@ -116,9 +170,15 @@ namespace BankBot
                 } else if (intent == "ClearData") {
 
                     await stateClient.BotState.DeleteStateForUserAsync(activity.ChannelId, activity.From.Id);
-                    await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"Your data has been cleared"));
+                    ACCOUNT = null;
+                    await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"You have been logged out"));
                     return Request.CreateResponse(HttpStatusCode.OK);
 
+                }
+
+                if (!userData.GetProperty<bool>("LoggedIn") || ACCOUNT == null) {
+                    await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"Please login!"));
+                    return Request.CreateResponse(HttpStatusCode.Unauthorized);
                 }
 
                 if (!userData.GetProperty<bool>("SendGreeting")) {
