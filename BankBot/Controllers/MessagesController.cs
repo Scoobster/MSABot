@@ -36,46 +36,39 @@ namespace BankBot
 
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity) {
             if (activity.Type == ActivityTypes.Message) {
+                if (activity.Text == "test") {
+                    List<string> types = new List<string>();
+                    types.Add("spending");
+                    types.Add("savings");
+                    types.Add("credit card");
 
-                List<string> types = new List<string>();
-                types.Add("spending");
-                types.Add("savings");
-                types.Add("credit card");
+                    Dictionary<string, double> amounts = new Dictionary<string, double>();
+                    amounts.Add("spending", 256);
+                    amounts.Add("savings", 5000.26);
+                    amounts.Add("credit card", 500);
 
-                Dictionary<string, double> amounts = new Dictionary<string, double>();
-                amounts.Add("spending", 256);
-                amounts.Add("savings", 5000.26);
-                amounts.Add("credit card", 500);
+                    Dictionary<string, string> numbers = new Dictionary<string, string>();
+                    numbers.Add("spending", "55-5555-5555555-25");
+                    numbers.Add("savings", "22-0000-5555555-25");
+                    numbers.Add("credit card", "33-6666-7777777-56");
 
-                Dictionary<string, string> numbers = new Dictionary<string, string>();
-                numbers.Add("spending", "55-5555-5555555-25");
-                numbers.Add("savings", "22-0000-5555555-25");
-                numbers.Add("credit card", "33-6666-7777777-56");
+                    List<string> payees = new List<string>();
+                    payees.Add("Bob");
+                    payees.Add("Allan");
+                    payees.Add("Max");
 
-                List<string> payees = new List<string>();
-                payees.Add("Bob");
-                payees.Add("Allan");
-                payees.Add("Max");
+                    BankAccount newAccount = new BankAccount() {
+                        Name = "Andrew",
+                        Date = DateTime.Now,
+                        Types = types,
+                        Amounts = amounts,
+                        AccountNumbers = numbers,
+                        Payees = payees
+                    };
 
-                BankAccount newAccount = new BankAccount() {
-                    Name = "Andrew",
-                    Date = DateTime.Now,
-                    Types = types,
-                    Amounts = amounts,
-                    AccountNumbers = numbers,
-                    Payees = payees
-                };
+                    await AzureManager.AzureManagerInstance.AddAccount(newAccount);
+                }
 
-                await AzureManager.AzureManagerInstance.AddAccount(newAccount);
-
-
-                /*    ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
-                    // calculate something for us to return
-                    int length = (activity.Text ?? string.Empty).Length;
-
-                    // return our reply to the user
-                    Activity reply = activity.CreateReply($"You sent {activity.Text} which was {length} characters. Oh and you suck!");
-                    await connector.Conversations.ReplyToActivityAsync(reply);  */
 
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
 
