@@ -17,7 +17,7 @@ using BankBot.DataModels;
 
 namespace BankBot
 {
-    //[BotAuthentication]
+    [BotAuthentication]
     public class MessagesController : ApiController
     {
         /// <summary>
