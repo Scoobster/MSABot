@@ -113,6 +113,8 @@
   <ItemGroup>
     <Content Include="default.htm" />
     <Content Include="Global.asax" />
+    <Content Include="Resources\BankMap.PNG" />
+    <Content Include="Resources\ContosoBankLogo.png" />
     <Content Include="Web.config">
       <SubType>Designer</SubType>
     </Content>
@@ -123,6 +125,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\DirectionsObject.cs" />
     <Compile Include="Models\LUISObject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

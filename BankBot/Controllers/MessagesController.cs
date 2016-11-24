@@ -8,6 +8,7 @@ using System.Web.Http.Description;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using BankBot.Models;
+using System.Collections.Generic;
 
 namespace BankBot
 {
@@ -18,6 +19,12 @@ namespace BankBot
         /// POST: api/Messages
         /// Receive a message from a user and reply to it
         /// </summary>
+        /// 
+
+        private readonly string BANK_ADDRESS = "12 Grafton Road, Auckland";
+        private readonly string BANK_LOGO = "https://s12.postimg.org/8pshbpbyl/Contoso_Bank_Logo.jpg";
+        private readonly string BANK_MAP = "https://s16.postimg.org/pmxx1efed/Bank_Map.png";
+
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity) {
             if (activity.Type == ActivityTypes.Message) {
                 /*    ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
@@ -40,6 +47,47 @@ namespace BankBot
                 luisObj = JsonConvert.DeserializeObject<LUISObject.RootObject>(x);
 
                 string intent = luisObj.topScoringIntent.intent;
+
+                if (activity.Text.Substring(0,8).ToLower() == "location") {
+
+                    string location = activity.Text.Substring(9);
+
+                    DirectionsObject.RootObject dirObj;
+                    string y = await client.GetStringAsync(new Uri("https://maps.googleapis.com/maps/api/directions/json?origin=" + location + "&destination=" + BANK_ADDRESS + "&key=AIzaSyBUytVVv7rrAWHM45JPuRgj52OEV_LwBnE"));
+                    dirObj = JsonConvert.DeserializeObject<DirectionsObject.RootObject>(y);
+
+                    string duration = dirObj.routes[0].legs[0].duration.text;
+                    string distance = dirObj.routes[0].legs[0].distance.text;
+                    string bankLocation = dirObj.routes[0].legs[0].end_address;
+
+                    Activity locateReply = activity.CreateReply($"The distance to the closest bank is " + distance);
+                    locateReply.Recipient = activity.From;
+                    locateReply.Type = "message";
+                    locateReply.Attachments = new List<Attachment>();
+
+                    List<CardImage> cardImg = new List<CardImage>();
+                    cardImg.Add(new CardImage(url: BANK_MAP));
+
+                    List<CardAction> cardAct = new List<CardAction>();
+                    cardAct.Add(new CardAction() {
+                        Value = "https://www.google.co.nz/maps/dir/" + location + "/" + BANK_ADDRESS,
+                        Type = "openUrl",
+                        Title = "Open Google Maps"
+                    });
+
+                    ThumbnailCard plCard = new ThumbnailCard() {
+                        Title = "Closest Bank",
+                        Subtitle = "The closest bank is at " + BANK_ADDRESS + " and is " + duration + " away.",
+                        Images = cardImg,
+                        Buttons = cardAct
+                    };
+
+                    locateReply.Attachments.Add(plCard.ToAttachment());
+                    await connector.Conversations.SendToConversationAsync(locateReply);
+                    
+                    return Request.CreateResponse(HttpStatusCode.OK);
+
+                }
 
                 if (intent == "SetName") {
 
@@ -87,9 +135,7 @@ namespace BankBot
 
                 } else if (intent == "FindBank") {
 
-                    //Make use of GPS and GooglePlacesAPI to give distance to closest bank
-                    //Use Cards
-                    output = "You wish to find a bank...";
+                    output = "Please reply with \"location\" and then your current address";
 
                 } else if (intent == "CheckBalance") {
 
@@ -110,7 +156,6 @@ namespace BankBot
 
                     //this will make the payment from one to the other
                     output = "You wish to make a payment of " + amount + " from your " + account + " account to " + payee;
-                    
 
                 }
 
