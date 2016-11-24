@@ -47,14 +47,16 @@ namespace BankBot
 
                 LUISObject.RootObject luisObj;
 
-                if (activity.Attachments.Count > 0) {
-                
-                    await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"You sent us a photo! We will try and give you your intented action from this photo."));
-                    VisionServiceClient VisionServiceClient = new VisionServiceClient("fff4c0ce2c8946a1a4a6bd8b951d13c6");
-                    AnalysisResult analysisResult = await VisionServiceClient.DescribeAsync(activity.Attachments[0].ContentUrl, 3);
-                    activity.Text = analysisResult.Description.Captions[0].Text;
-                    await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"The photo you sent us is of " + activity.Text));
-                
+                if (activity.Attachments != null) {
+                    if (activity.Attachments.Count > 0) {
+
+                        await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"You sent us a photo! We will try and give you your intented action from this photo."));
+                        VisionServiceClient VisionServiceClient = new VisionServiceClient("fff4c0ce2c8946a1a4a6bd8b951d13c6");
+                        AnalysisResult analysisResult = await VisionServiceClient.DescribeAsync(activity.Attachments[0].ContentUrl, 3);
+                        activity.Text = analysisResult.Description.Captions[0].Text;
+                        await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"The photo you sent us is of " + activity.Text));
+
+                    }
                 }
 
                 HttpClient client = new HttpClient();
