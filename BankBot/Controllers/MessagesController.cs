@@ -50,6 +50,7 @@ namespace BankBot
                     VisionServiceClient VisionServiceClient = new VisionServiceClient("fff4c0ce2c8946a1a4a6bd8b951d13c6");
                     AnalysisResult analysisResult = await VisionServiceClient.DescribeAsync(activity.Attachments[0].ContentUrl, 3);
                     activity.Text = analysisResult.Description.Captions[0].Text;
+                    await connector.Conversations.ReplyToActivityAsync(activity.CreateReply($"" + activity.Text));
                 }
 
                 HttpClient client = new HttpClient();
